@@ -37,25 +37,53 @@ library MathMasters {
         // @solidity memory-safe-assembly
         assembly {
             // Equivalent to `require(y == 0 || x <= type(uint256).max / y)`.
-            if mul(y, gt(x, div(not(0), y))) {
-                mstore(0x40, 0xbac65e5b) // `MathMasters__MulWadFailed()`.
-                revert(0x1c, 0x04)
+            if mul(y,                               // if y == 0 continue, else fail due to overflow if gt != 0
+                    gt(x,                           // check if x * y will overflow in 256 bits
+                        div(                        // div uint256 max / input y
+                            not(0), y)))            // not -> flip all bits e.g. 0x00 ... 0xff ...
+            {                           
+                //overriding free memory pointer!!
+                // @audit blank error message
+                // @audit wrong error selector, should be 0xa56044f7
+                mstore(0x40, 0xbac65e5b)// `MathMasters__MulWadFailed()`.
+                revert(0x1c, 0x04)      // 0x1c = 28 bytes offset, revert with 4 bytes value of named error 0xbac65e5b
             }
-            z := div(mul(x, y), WAD)
+            z := div(mul(x, y), WAD)    // looks good, due to checks above, auto round down
         }
     }
 
     /// @dev Equivalent to `(x * y) / WAD` rounded up.
-    function mulWadUp(uint256 x, uint256 y) internal pure returns (uint256 z) {
+    function mulWadUp(uint256 x, uint256 y) internal pure returns (uint256 z) { //init z = 0
         /// @solidity memory-safe-assembly
         assembly {
             // Equivalent to `require(y == 0 || x <= type(uint256).max / y)`.
-            if mul(y, gt(x, div(not(0), y))) {
+            if mul(y, gt(x, div(not(0), y))) {  //same as above, check for overflow if gt != 0
+                // @audit wrong error selector, should be 0xa56044f7
+                // same issues as above, override fmp
                 mstore(0x40, 0xbac65e5b) // `MathMasters__MulWadFailed()`.
                 revert(0x1c, 0x04)
             }
-            if iszero(sub(div(add(z, x), y), 1)) { x := add(x, 1) }
-            z := add(iszero(iszero(mod(mul(x, y), WAD))), div(mul(x, y), WAD))
+            // @audit this is not needed, rounds up too much
+            if iszero(
+                sub(
+                    div(
+                        add(z, x), y),  //  0 + x / y - 1 == 0 ?
+                                        1)) 
+                                        {   // true x += 1
+                                            // else continue
+                                            x := add(x, 1) 
+                                        }
+
+            z := add(
+                    iszero(
+                        iszero(
+                            mod(
+                                mul(x, y), WAD) // x * y % 1e18 ... remainder
+                            )                   // remainder == 0 ?
+                        ),                      // remainder != 0 ?
+                        div(                    // if not divide in evenly ... add 1 to result
+                            mul(x, y), WAD)
+                    )
         }
     }
 

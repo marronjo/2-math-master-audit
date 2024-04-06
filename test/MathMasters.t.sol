@@ -2,7 +2,7 @@
 pragma solidity ^0.8.3;
 
 import {Base_Test, console2} from "./Base_Test.t.sol";
-import {MathMasters} from "src/MathMasters.sol";
+import {MathMasters} from "../src/MathMasters.sol";
 
 contract MathMastersTest is Base_Test {
     function testMulWad() public {
@@ -23,6 +23,18 @@ contract MathMastersTest is Base_Test {
         assertEq(MathMasters.mulWadUp(2.5e18, 0.5e18), 1.25e18);
         assertEq(MathMasters.mulWadUp(3e18, 1e18), 3e18);
         assertEq(MathMasters.mulWadUp(369, 271), 1);
+    }
+
+    function testMulWadUpFailedFuzz() public {
+        uint256 x = 3323484123583475243233908;
+        uint256 y = 1661742061791737621616955;
+        uint256 result = MathMasters.mulWadUp(x, y);
+        uint256 resultDown = MathMasters.mulWad(x, y);
+
+        console2.log(result);
+        console2.log(resultDown);
+
+        assertEq(result, resultDown + 1); //should only round up by 1
     }
 
     function testMulWadUpFuzz(uint256 x, uint256 y) public {
@@ -51,10 +63,12 @@ contract MathMastersTest is Base_Test {
         assertEq(MathMasters.sqrt(type(uint256).max), 340282366920938463463374607431768211455);
     }
 
+    // assumption : uniSqrt function is correct ?
     function testSqrtFuzzUni(uint256 x) public pure {
         assert(MathMasters.sqrt(x) == uniSqrt(x));
     }
 
+     // assumption : solmateSqrt function is correct ?
     function testSqrtFuzzSolmate(uint256 x) public pure {
         assert(MathMasters.sqrt(x) == solmateSqrt(x));
     }

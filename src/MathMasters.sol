@@ -102,8 +102,8 @@ library MathMasters {
             let r := shl(7, lt(87112285931760246646623899502532662132735, x))
             r := or(r, shl(6, lt(4722366482869645213695, shr(r, x))))
             r := or(r, shl(5, lt(1099511627775, shr(r, x))))
-            // Correct: 16777215 0xffffff
-            r := or(r, shl(4, lt(16777002, shr(r, x))))
+            // Correct: 16777215 0xffffff               // better to use hexadecimal instead of decimal
+            r := or(r, shl(4, lt(16777002, shr(r, x)))) //should be 0xffffffff not 0xffffff2a
             z := shl(shr(1, r), z)
 
             // There is no overflow risk here since `y < 2**136` after the first branch above.

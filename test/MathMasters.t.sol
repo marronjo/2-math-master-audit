@@ -3,8 +3,12 @@ pragma solidity ^0.8.3;
 
 import {Base_Test, console2} from "./Base_Test.t.sol";
 import {MathMasters} from "../src/MathMasters.sol";
+import {Harness} from "../certora/Harness.sol";
 
 contract MathMastersTest is Base_Test {
+
+    Harness harness = new Harness();
+
     function testMulWad() public {
         assertEq(MathMasters.mulWad(2.5e18, 0.5e18), 1.25e18);
         assertEq(MathMasters.mulWad(3e18, 1e18), 3e18);
@@ -54,6 +58,14 @@ contract MathMastersTest is Base_Test {
         // depending on whether you want to consider such an overflow case as passing or failing.
     }
 
+    function check_testMulWadUpFuzz(uint256 x, uint256 y) public pure {
+        if (x == 0 || y == 0 || y <= type(uint256).max / x) {
+            uint256 result = MathMasters.mulWadUp(x, y);
+            uint256 expected = x * y == 0 ? 0 : (x * y - 1) / 1e18 + 1;
+            assert(result == expected);
+        }
+    }
+
     function testSqrt() public {
         assertEq(MathMasters.sqrt(0), 0);
         assertEq(MathMasters.sqrt(1), 1);
@@ -71,5 +83,14 @@ contract MathMastersTest is Base_Test {
      // assumption : solmateSqrt function is correct ?
     function testSqrtFuzzSolmate(uint256 x) public pure {
         assert(MathMasters.sqrt(x) == solmateSqrt(x));
+    }
+
+    function test_mathMastersTopHalf(uint256 x) public view {
+        assert(harness.mathMastersTopHalf(x) == harness.solmateTopHalf(x));
+    }
+
+    function test_mathMastersTopHalf() public view {
+        uint256 x = 0xffff2b0000000000000000;   //edge case from certora
+        assert(harness.mathMastersTopHalf(x) == harness.solmateTopHalf(x));
     }
 }
